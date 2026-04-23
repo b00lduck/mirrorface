@@ -27,6 +27,9 @@ function Home() {
   const [isResizing, setIsResizing] = useState(false);
   const [resizeHandle, setResizeHandle] = useState<string>("");
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [contrast, setContrast] = useState<number>(100); // percent
+  const [brightness, setBrightness] = useState<number>(100); // percent
+  const [saturation, setSaturation] = useState<number>(100); // percent
   const imageContainerRef = useRef<HTMLDivElement>(null);
   const loadedImageRef = useRef<HTMLImageElement | null>(null);
   const displayedImageRef = useRef<HTMLImageElement | null>(null);
@@ -37,6 +40,9 @@ function Home() {
     mirrorPosition: linePosition,
     mode: "left",
     deadZone,
+    contrast,
+    brightness,
+    saturation,
   });
 
   const rightMirrorResult = useMirrorImage({
@@ -44,6 +50,9 @@ function Home() {
     mirrorPosition: linePosition,
     mode: "right",
     deadZone,
+    contrast,
+    brightness,
+    saturation,
   });
 
   // Load the image once when uploadedImage changes
@@ -94,6 +103,16 @@ function Home() {
     };
   }, []);
 
+  const resetAllControls = () => {
+    setCropRect({ x: 25, y: 25, width: 50, height: 50 });
+    setRotation(0);
+    setLinePosition(50);
+    setDeadZone(0);
+    setContrast(100);
+    setBrightness(100);
+    setSaturation(100);
+  };
+
   const fetchImageAsDataUrl = async (url: string) => {
     try {
       console.log("Fetching image as blob...");
@@ -109,6 +128,7 @@ function Home() {
       reader.onload = () => {
         const dataUrl = reader.result as string;
         console.log("Converted to data URL, length:", dataUrl.length);
+        resetAllControls();
         loadImageFromDataUrl(dataUrl);
       };
 
@@ -131,8 +151,9 @@ function Home() {
 
     img.onload = () => {
       console.log("Direct load successful:", img.width, "x", img.height);
+      resetAllControls();
       loadedImageRef.current = img;
-      cropImage(img, cropRect);
+      cropImage(img, { x: 25, y: 25, width: 50, height: 50 });
     };
 
     img.onerror = () => {
@@ -152,8 +173,9 @@ function Home() {
 
     img.onload = () => {
       console.log("Image loaded successfully:", img.width, "x", img.height);
+      resetAllControls();
       loadedImageRef.current = img;
-      cropImage(img, cropRect);
+      cropImage(img, { x: 25, y: 25, width: 50, height: 50 });
     };
 
     img.onerror = (error) => {
@@ -483,44 +505,38 @@ function Home() {
                         );
                       }
                     }}
-                    onError={() => {
-                      console.error("Failed to display image");
-                      setUploadedImage(null);
-                      alert(
-                        "Failed to load image. It may be blocked by CORS policy or the URL is invalid. Please try uploading a file instead.",
-                      );
+                  />
+                  {/* Crop rectangle overlay */}
+                  <div
+                    className="crop-rectangle"
+                    style={{
+                      left: `${cropRect.x}%`,
+                      top: `${cropRect.y}%`,
+                      width: `${cropRect.width}%`,
+                      height: `${cropRect.height}%`,
+                      cursor: isDragging ? "grabbing" : "grab",
                     }}
-                  />
-                </div>
-                <div
-                  className="crop-rectangle"
-                  style={{
-                    left: `${cropRect.x}%`,
-                    top: `${cropRect.y}%`,
-                    width: `${cropRect.width}%`,
-                    height: `${cropRect.height}%`,
-                    cursor: isDragging ? "grabbing" : "grab",
-                  }}
-                >
-                  <div
-                    className="resize-handle resize-handle-nw"
-                    onMouseDown={(e) => handleResizeMouseDown(e, "nw")}
-                  />
-                  <div
-                    className="resize-handle resize-handle-ne"
-                    onMouseDown={(e) => handleResizeMouseDown(e, "ne")}
-                  />
-                  <div
-                    className="resize-handle resize-handle-sw"
-                    onMouseDown={(e) => handleResizeMouseDown(e, "sw")}
-                  />
-                  <div
-                    className="resize-handle resize-handle-se"
-                    onMouseDown={(e) => handleResizeMouseDown(e, "se")}
-                  />
+                  >
+                    <div
+                      className="resize-handle resize-handle-nw"
+                      onMouseDown={(e) => handleResizeMouseDown(e, "nw")}
+                    />
+                    <div
+                      className="resize-handle resize-handle-ne"
+                      onMouseDown={(e) => handleResizeMouseDown(e, "ne")}
+                    />
+                    <div
+                      className="resize-handle resize-handle-sw"
+                      onMouseDown={(e) => handleResizeMouseDown(e, "sw")}
+                    />
+                    <div
+                      className="resize-handle resize-handle-se"
+                      onMouseDown={(e) => handleResizeMouseDown(e, "se")}
+                    />
+                  </div>
                 </div>
               </div>
-              {/* Rotation slider */}
+              {/* Rotation, Contrast, Brightness, Saturation sliders */}
               <div className="slider-container" style={{ marginTop: 16 }}>
                 <label
                   htmlFor="rotation-slider"
@@ -536,6 +552,45 @@ function Home() {
                   value={rotation}
                   onChange={(e) => setRotation(Number(e.target.value))}
                   className="rotation-slider"
+                  style={{ width: "100%" }}
+                />
+                <label htmlFor="contrast-slider" style={{ marginTop: 12 }}>
+                  Contrast: {contrast}%
+                </label>
+                <input
+                  id="contrast-slider"
+                  type="range"
+                  min="0"
+                  max="300"
+                  value={contrast}
+                  onChange={(e) => setContrast(Number(e.target.value))}
+                  className="contrast-slider"
+                  style={{ width: "100%" }}
+                />
+                <label htmlFor="brightness-slider" style={{ marginTop: 12 }}>
+                  Brightness: {brightness}%
+                </label>
+                <input
+                  id="brightness-slider"
+                  type="range"
+                  min="0"
+                  max="300"
+                  value={brightness}
+                  onChange={(e) => setBrightness(Number(e.target.value))}
+                  className="brightness-slider"
+                  style={{ width: "100%" }}
+                />
+                <label htmlFor="saturation-slider" style={{ marginTop: 12 }}>
+                  Saturation: {saturation}%
+                </label>
+                <input
+                  id="saturation-slider"
+                  type="range"
+                  min="0"
+                  max="300"
+                  value={saturation}
+                  onChange={(e) => setSaturation(Number(e.target.value))}
+                  className="saturation-slider"
                   style={{ width: "100%" }}
                 />
               </div>
