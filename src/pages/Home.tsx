@@ -11,6 +11,7 @@ interface CropRect {
 }
 
 function Home() {
+  const [deadZone, setDeadZone] = useState<number>(0);
   const [rotation, setRotation] = useState<number>(0);
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [croppedImage, setCroppedImage] = useState<string | null>(null);
@@ -35,12 +36,14 @@ function Home() {
     sourceImage: croppedImage,
     mirrorPosition: linePosition,
     mode: "left",
+    deadZone,
   });
 
   const rightMirrorResult = useMirrorImage({
     sourceImage: croppedImage,
     mirrorPosition: linePosition,
     mode: "right",
+    deadZone,
   });
 
   // Load the image once when uploadedImage changes
@@ -552,7 +555,20 @@ function Home() {
                     />
                     <div
                       className="vertical-line"
-                      style={{ left: `${linePosition}%` }}
+                      style={{
+                        left: `${linePosition}%`,
+                        width: `${deadZone}px`,
+                        transform: "translateX(-50%)",
+                        background: "rgba(255,0,0,0.7)",
+                        position: "absolute",
+                        top: 0,
+                        bottom: 0,
+                        height: "100%",
+                        zIndex: 2,
+                        pointerEvents: "none",
+                        borderRadius: "2px",
+                        transition: "width 0.2s, left 0.2s, transform 0.2s",
+                      }}
                     />
                   </>
                 ) : (
@@ -560,6 +576,7 @@ function Home() {
                 )}
               </div>
               <div className="slider-container">
+                <label htmlFor="line-slider">Line Position</label>
                 <input
                   id="line-slider"
                   type="range"
@@ -568,6 +585,19 @@ function Home() {
                   value={linePosition}
                   onChange={handleSliderChange}
                   className="line-slider"
+                />
+                <label htmlFor="deadzone-slider" style={{ marginTop: 12 }}>
+                  Dead Zone (px): {deadZone}
+                </label>
+                <input
+                  id="deadzone-slider"
+                  type="range"
+                  min="0"
+                  max="100"
+                  value={deadZone}
+                  onChange={(e) => setDeadZone(Number(e.target.value))}
+                  className="deadzone-slider"
+                  style={{ width: "100%" }}
                 />
               </div>
             </div>
