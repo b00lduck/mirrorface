@@ -20,7 +20,6 @@ Live demo: [https://b00lduck.github.io/mirrorface/](https://b00lduck.github.io/m
 - **React 18** - UI framework
 - **TypeScript** - Type safety
 - **Vite** - Fast build tool and dev server
-- **React Router** - Client-side routing
 - **Canvas API** - Image manipulation
 - **pnpm** - Package manager
 
