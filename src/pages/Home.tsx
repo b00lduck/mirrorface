@@ -29,10 +29,17 @@ function Home() {
   const loadedImageRef = useRef<HTMLImageElement | null>(null);
   const displayedImageRef = useRef<HTMLImageElement | null>(null);
 
-  // Use the mirror image hook for step 3
-  const finalResult = useMirrorImage({
+  // Use the mirror image hook for step 3 - both modes
+  const leftMirrorResult = useMirrorImage({
     sourceImage: croppedImage,
     mirrorPosition: linePosition,
+    mode: "left",
+  });
+
+  const rightMirrorResult = useMirrorImage({
+    sourceImage: croppedImage,
+    mirrorPosition: linePosition,
+    mode: "right",
   });
 
   // Load the image once when uploadedImage changes
@@ -483,20 +490,66 @@ function Home() {
               </div>
             </div>
 
-            {/* Step 3: RESULT */}
+            {/* Step 3: RESULTS */}
             <div className="image-column result-column">
               <h3>3. RESULT</h3>
-              <p className="step-description">Final processed image</p>
-              <div className="image-container">
-                {finalResult ? (
-                  <img
-                    src={finalResult}
-                    alt="Final result"
-                    className="result-image"
-                  />
-                ) : (
-                  <div className="processing-message">Processing...</div>
-                )}
+              <p className="step-description">Final processed images</p>
+
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "row",
+                  gap: "1rem",
+                  flexWrap: "wrap",
+                  justifyContent: "center",
+                }}
+              >
+                <div>
+                  <h4
+                    style={{
+                      fontSize: "1rem",
+                      marginBottom: "0.5rem",
+                      opacity: 0.9,
+                      textAlign: "center",
+                    }}
+                  >
+                    Left Mirror
+                  </h4>
+                  <div className="image-container">
+                    {leftMirrorResult ? (
+                      <img
+                        src={leftMirrorResult}
+                        alt="Left mirror result"
+                        className="result-image"
+                      />
+                    ) : (
+                      <div className="processing-message">Processing...</div>
+                    )}
+                  </div>
+                </div>
+                <div>
+                  <h4
+                    style={{
+                      fontSize: "1rem",
+                      marginBottom: "0.5rem",
+                      opacity: 0.9,
+                      textAlign: "center",
+                    }}
+                  >
+                    Right Mirror
+                  </h4>
+                  <div className="image-container">
+                    {rightMirrorResult ? (
+                      <img
+                        src={rightMirrorResult}
+                        alt="Right mirror result"
+                        className="result-image"
+                      />
+                    ) : (
+                      <div className="processing-message">Processing...</div>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
           </div>
