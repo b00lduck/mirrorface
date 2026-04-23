@@ -389,7 +389,6 @@ function Home() {
 
   return (
     <div className="home">
-      <h1 className="home-title">Upload Your Face Photo</h1>
       <p className="home-description">
         Select a photo from your device, paste from clipboard, or enter an image
         URL.
@@ -420,7 +419,6 @@ function Home() {
 
       {uploadedImage && (
         <div className="image-display">
-          <h2>Image Processing Pipeline</h2>
           <div className="images-wrapper">
             {/* Step 1: CROP */}
             <div className="image-column">

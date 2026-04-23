@@ -17,15 +17,19 @@ export function useMirrorImage({
 }: UseMirrorImageParams) {
   const [mirroredImage, setMirroredImage] = useState<string | null>(null);
 
+
+  // Clamp mirrorPosition to avoid 0% or 100%
   useEffect(() => {
     if (sourceImage) {
+      // Clamp between 1 and 99
+      const safeMirrorPosition = Math.max(1, Math.min(99, mirrorPosition));
       console.log(
         "Processing mirror effect at line position:",
-        mirrorPosition,
+        safeMirrorPosition,
         "mode:",
         mode,
       );
-      processMirrorEffect(sourceImage, mirrorPosition, mode);
+      processMirrorEffect(sourceImage, safeMirrorPosition, mode);
     } else {
       setMirroredImage(null);
     }

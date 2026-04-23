@@ -17,7 +17,7 @@ function About() {
         <ul>
           <li>Easy photo upload from your device</li>
           <li>Instant photo preview</li>
-          <li>Responsive design that works on all devices</li>
+
           <li>Clean and modern user interface</li>
         </ul>
       </div>
