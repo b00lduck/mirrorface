@@ -8,6 +8,7 @@ interface UseMirrorImageParams {
   contrast?: number; // percent, 100 = normal
   brightness?: number; // percent, 100 = normal
   saturation?: number; // percent, 100 = normal
+  hue?: number; // degrees, 0 = normal
 }
 
 /**
@@ -22,68 +23,27 @@ export function useMirrorImage({
   contrast = 100,
   brightness = 100,
   saturation = 100,
-}: UseMirrorImageParams) {
+  hue = 0,
+}: UseMirrorImageParams): string | null {
   const [mirroredImage, setMirroredImage] = useState<string | null>(null);
 
-  // Clamp mirrorPosition to avoid 0% or 100%
   useEffect(() => {
-    if (sourceImage) {
-      // Clamp between 1 and 99
-      const safeMirrorPosition = Math.max(1, Math.min(99, mirrorPosition));
-      processMirrorEffect(
-        sourceImage,
-        safeMirrorPosition,
-        mode,
-        deadZone,
-        contrast,
-        brightness,
-        saturation,
-      );
-    } else {
+    if (!sourceImage) {
       setMirroredImage(null);
+      return;
     }
-  }, [
-    sourceImage,
-    mirrorPosition,
-    mode,
-    deadZone,
-    contrast,
-    brightness,
-    saturation,
-  ]);
-
-  const processMirrorEffect = (
-    imageSrc: string,
-    mirrorLinePosition: number,
-    mode: "left" | "right" = "left",
-    deadZone: number = 0,
-    contrast: number = 100,
-    brightness: number = 100,
-    saturation: number = 100,
-  ) => {
-    const img = new Image();
-
+    const img = new window.Image();
     img.onload = () => {
       const canvas = document.createElement("canvas");
       const ctx = canvas.getContext("2d");
-
       if (!ctx) {
-        console.error("Could not get canvas context for mirror");
+        setMirroredImage(sourceImage);
         return;
       }
-
-      // Calculate the mirror line position in pixels
-      const mirrorX = (img.width * mirrorLinePosition) / 100;
-      // Dead zone is in pixels, centered on mirrorX
+      const mirrorX = (img.width * mirrorPosition) / 100;
       const dz = Math.max(0, Math.min(deadZone, img.width));
       const dzHalf = dz / 2;
-
-      // For left mode: left side is [0, mirrorX - dz/2), right side is [mirrorX + dz/2, mirrorX + dz/2 + (mirrorX - dz/2))
-      // For right mode: right side is [mirrorX + dz/2, img.width), left side is [mirrorX - dz/2 - (img.width - (mirrorX + dz/2)), mirrorX - dz/2)
-
       canvas.height = img.height;
-
-      // Helper to apply contrast/brightness to a region
       function applyAdjustmentsToRegion(
         sx: number,
         sy: number,
@@ -102,9 +62,10 @@ export function useMirrorImage({
         const imageData = tctx?.getImageData(0, 0, sw, sh);
         if (imageData) {
           const data = imageData.data;
-          const c = contrast / 100;
-          const b = brightness / 100;
-          const s = saturation / 100;
+          const c = (contrast ?? 100) / 100;
+          const b = (brightness ?? 100) / 100;
+          const s = (saturation ?? 100) / 100;
+          const hShift = hue ?? 0;
           for (let i = 0; i < data.length; i += 4) {
             // Brightness
             data[i] = Math.min(255, Math.max(0, data[i] * b));
@@ -112,24 +73,14 @@ export function useMirrorImage({
             data[i + 2] = Math.min(255, Math.max(0, data[i + 2] * b));
             // Contrast
             data[i] = Math.min(255, Math.max(0, (data[i] - 128) * c + 128));
-            data[i + 1] = Math.min(
-              255,
-              Math.max(0, (data[i + 1] - 128) * c + 128),
-            );
-            data[i + 2] = Math.min(
-              255,
-              Math.max(0, (data[i + 2] - 128) * c + 128),
-            );
-            // Saturation
-            // Convert to HSL, adjust S, convert back
+            data[i + 1] = Math.min(255, Math.max(0, (data[i + 1] - 128) * c + 128));
+            data[i + 2] = Math.min(255, Math.max(0, (data[i + 2] - 128) * c + 128));
+            // Saturation & Hue
             let r = data[i] / 255;
             let g = data[i + 1] / 255;
             let b2 = data[i + 2] / 255;
-            const max = Math.max(r, g, b2),
-              min = Math.min(r, g, b2);
-            let h = 0,
-              s0 = 0,
-              l = (max + min) / 2;
+            const max = Math.max(r, g, b2), min = Math.min(r, g, b2);
+            let h = 0, s0 = 0, l = (max + min) / 2;
             if (max !== min) {
               const d = max - min;
               s0 = l > 0.5 ? d / (2 - max - min) : d / (max + min);
@@ -146,9 +97,9 @@ export function useMirrorImage({
               }
               h /= 6;
             }
-            // Apply saturation
+            h = (h + hShift / 360) % 1;
+            if (h < 0) h += 1;
             s0 *= s;
-            // Convert back to RGB
             function hue2rgb(p: number, q: number, t: number) {
               if (t < 0) t += 1;
               if (t > 1) t -= 1;
@@ -159,7 +110,7 @@ export function useMirrorImage({
             }
             let r1, g1, b1;
             if (s0 === 0) {
-              r1 = g1 = b1 = l; // achromatic
+              r1 = g1 = b1 = l;
             } else {
               const q = l < 0.5 ? l * (1 + s0) : l + s0 - l * s0;
               const p = 2 * l - q;
@@ -177,13 +128,10 @@ export function useMirrorImage({
           ctx.drawImage(temp, 0, 0, sw, sh, dx, dy, dw, dh);
         }
       }
-
       if (mode === "left") {
         const leftWidth = mirrorX - dzHalf;
         const rightWidth = leftWidth;
         canvas.width = leftWidth + rightWidth - 1;
-
-        // Draw left side (original, with adjustments)
         applyAdjustmentsToRegion(
           0,
           0,
@@ -194,8 +142,6 @@ export function useMirrorImage({
           leftWidth,
           img.height,
         );
-
-        // Draw right side (mirrored, with adjustments)
         ctx.save();
         ctx.translate(leftWidth + dz + rightWidth, 0);
         ctx.scale(-1, 1);
@@ -211,12 +157,9 @@ export function useMirrorImage({
         );
         ctx.restore();
       } else {
-        // mode === "right"
         const rightWidth = img.width - (mirrorX + dzHalf);
         const leftWidth = rightWidth;
         canvas.width = leftWidth + rightWidth - 1;
-
-        // Draw left side (mirrored, with adjustments)
         ctx.save();
         ctx.translate(leftWidth, 0);
         ctx.scale(-1, 1);
@@ -231,8 +174,6 @@ export function useMirrorImage({
           img.height,
         );
         ctx.restore();
-
-        // Draw right side (original, with adjustments)
         applyAdjustmentsToRegion(
           mirrorX + dzHalf,
           0,
@@ -244,18 +185,15 @@ export function useMirrorImage({
           img.height,
         );
       }
-
-      // Convert to data URL
       const mirroredDataUrl = canvas.toDataURL("image/png");
       setMirroredImage(mirroredDataUrl);
     };
-
     img.onerror = () => {
-      setMirroredImage(imageSrc);
+      setMirroredImage(sourceImage);
     };
-
-    img.src = imageSrc;
-  };
+    img.src = sourceImage;
+  }, [sourceImage, mirrorPosition, mode, deadZone, contrast, brightness, saturation, hue]);
 
   return mirroredImage;
 }
+// ...existing code...

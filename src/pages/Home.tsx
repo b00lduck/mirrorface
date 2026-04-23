@@ -30,6 +30,7 @@ function Home() {
   const [contrast, setContrast] = useState<number>(100); // percent
   const [brightness, setBrightness] = useState<number>(100); // percent
   const [saturation, setSaturation] = useState<number>(100); // percent
+  const [hue, setHue] = useState<number>(0); // degrees
   const imageContainerRef = useRef<HTMLDivElement>(null);
   const loadedImageRef = useRef<HTMLImageElement | null>(null);
   const displayedImageRef = useRef<HTMLImageElement | null>(null);
@@ -43,6 +44,7 @@ function Home() {
     contrast,
     brightness,
     saturation,
+    hue,
   });
 
   const rightMirrorResult = useMirrorImage({
@@ -53,6 +55,7 @@ function Home() {
     contrast,
     brightness,
     saturation,
+    hue,
   });
 
   // Load the image once when uploadedImage changes
@@ -111,6 +114,7 @@ function Home() {
     setContrast(100);
     setBrightness(100);
     setSaturation(100);
+    setHue(0);
   };
 
   const fetchImageAsDataUrl = async (url: string) => {
@@ -536,7 +540,7 @@ function Home() {
                   </div>
                 </div>
               </div>
-              {/* Rotation, Contrast, Brightness, Saturation sliders */}
+              {/* Rotation, Contrast, Brightness, Saturation, Hue sliders */}
               <div className="slider-container" style={{ marginTop: 16 }}>
                 <label
                   htmlFor="rotation-slider"
@@ -591,6 +595,19 @@ function Home() {
                   value={saturation}
                   onChange={(e) => setSaturation(Number(e.target.value))}
                   className="saturation-slider"
+                  style={{ width: "100%" }}
+                />
+                <label htmlFor="hue-slider" style={{ marginTop: 12 }}>
+                  Hue: {hue}&deg;
+                </label>
+                <input
+                  id="hue-slider"
+                  type="range"
+                  min="-180"
+                  max="180"
+                  value={hue}
+                  onChange={(e) => setHue(Number(e.target.value))}
+                  className="hue-slider"
                   style={{ width: "100%" }}
                 />
               </div>
