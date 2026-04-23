@@ -11,6 +11,7 @@ interface CropRect {
 }
 
 function Home() {
+  const [rotation, setRotation] = useState<number>(0);
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [croppedImage, setCroppedImage] = useState<string | null>(null);
   const [linePosition, setLinePosition] = useState<number>(50);
@@ -161,45 +162,57 @@ function Home() {
     img.src = dataUrl;
   };
 
-  // Crop the image when cropRect changes (reuse loaded image)
+  // Crop and rotate the image when cropRect or rotation changes (reuse loaded image)
   useEffect(() => {
     if (loadedImageRef.current) {
-      console.log("Cropping with rect:", cropRect);
-      cropImage(loadedImageRef.current, cropRect);
+      console.log("Cropping with rect:", cropRect, "rotation:", rotation);
+      cropImage(loadedImageRef.current, cropRect, rotation);
     } else {
       console.log("No loaded image in ref");
     }
-  }, [cropRect]);
+  }, [cropRect, rotation]);
 
-  const cropImage = (img: HTMLImageElement, rect: CropRect) => {
-    const canvas = document.createElement("canvas");
-    const ctx = canvas.getContext("2d");
-
-    if (!ctx) {
-      console.error("Could not get canvas context");
+  const cropImage = (
+    img: HTMLImageElement,
+    rect: CropRect,
+    rotation: number = 0,
+  ) => {
+    // 1. Rotate the full image onto a temp canvas
+    const radians = (rotation * Math.PI) / 180;
+    let tempWidth = img.width;
+    let tempHeight = img.height;
+    if (rotation !== 0) {
+      tempWidth =
+        Math.abs(img.width * Math.cos(radians)) +
+        Math.abs(img.height * Math.sin(radians));
+      tempHeight =
+        Math.abs(img.width * Math.sin(radians)) +
+        Math.abs(img.height * Math.cos(radians));
+    }
+    const tempCanvas = document.createElement("canvas");
+    tempCanvas.width = tempWidth;
+    tempCanvas.height = tempHeight;
+    const tempCtx = tempCanvas.getContext("2d");
+    if (!tempCtx) {
+      console.error("Could not get temp canvas context");
       return;
     }
+    tempCtx.save();
+    tempCtx.translate(tempWidth / 2, tempHeight / 2);
+    tempCtx.rotate(radians);
+    tempCtx.drawImage(img, -img.width / 2, -img.height / 2);
+    tempCtx.restore();
 
-    // Calculate crop rectangle in pixels
-    const cropX = (img.width * rect.x) / 100;
-    const cropY = (img.height * rect.y) / 100;
-    const cropWidth = (img.width * rect.width) / 100;
-    const cropHeight = (img.height * rect.height) / 100;
+    // 2. Calculate crop rectangle in the rotated image
+    const cropX = (tempWidth * rect.x) / 100;
+    const cropY = (tempHeight * rect.y) / 100;
+    const cropWidth = (tempWidth * rect.width) / 100;
+    const cropHeight = (tempHeight * rect.height) / 100;
 
-    console.log("Cropping:", {
-      cropX,
-      cropY,
-      cropWidth,
-      cropHeight,
-      imgWidth: img.width,
-      imgHeight: img.height,
-    });
-
-    // Calculate scaled dimensions to fit 300px max
+    // 3. Scale cropped region to fit 300px max
     const maxDimension = 300;
     let finalWidth = cropWidth;
     let finalHeight = cropHeight;
-
     if (cropWidth > maxDimension || cropHeight > maxDimension) {
       const scale = Math.min(
         maxDimension / cropWidth,
@@ -209,16 +222,18 @@ function Home() {
       finalHeight = cropHeight * scale;
     }
 
-    console.log("Final dimensions:", { finalWidth, finalHeight });
-
-    // Set canvas size to the scaled dimensions
+    // 4. Draw the cropped region to the output canvas
+    const canvas = document.createElement("canvas");
     canvas.width = finalWidth;
     canvas.height = finalHeight;
-
+    const ctx = canvas.getContext("2d");
+    if (!ctx) {
+      console.error("Could not get output canvas context");
+      return;
+    }
     try {
-      // Draw the cropped and scaled portion
       ctx.drawImage(
-        img,
+        tempCanvas,
         cropX,
         cropY, // Source x, y
         cropWidth,
@@ -228,14 +243,11 @@ function Home() {
         finalWidth,
         finalHeight, // Destination width, height (scaled)
       );
-
       // Convert to data URL
       const croppedDataUrl = canvas.toDataURL("image/png");
-      console.log("Generated cropped image, length:", croppedDataUrl.length);
       setCroppedImage(croppedDataUrl);
     } catch (error) {
       console.error("Error drawing to canvas (CORS tainted?):", error);
-      // Show a message but keep the original image visible
       alert(
         "Cannot crop this image due to CORS restrictions. The image is displayed but cannot be processed. Please upload a file instead.",
       );
@@ -398,7 +410,6 @@ function Home() {
           External URLs may not work due to CORS restrictions.
         </small>
       </p>
-
       <div className="input-methods">
         <ImageUpload onImageUpload={handleImageUpload} />
 
@@ -416,7 +427,6 @@ function Home() {
           </button>
         </div>
       </div>
-
       {uploadedImage && (
         <div className="image-display">
           <div className="images-wrapper">
@@ -434,27 +444,51 @@ function Home() {
                 onMouseUp={handleMouseUp}
                 onMouseLeave={handleMouseUp}
               >
-                <img
-                  ref={displayedImageRef}
-                  src={uploadedImage}
-                  alt="Source image"
-                  className="uploaded-image"
-                  draggable={false}
-                  onLoad={() => {
-                    console.log("Displayed image loaded!");
-                    if (displayedImageRef.current) {
-                      loadedImageRef.current = displayedImageRef.current;
-                      cropImage(displayedImageRef.current, cropRect);
-                    }
+                <div
+                  style={{
+                    display: "inline-block",
+                    maxWidth: 300,
+                    maxHeight: 300,
+                    borderRadius: 12,
+                    boxShadow: "0 10px 40px rgba(0,0,0,0.3)",
+                    border: "4px solid rgba(255,255,255,0.2)",
+                    overflow: "hidden",
+                    position: "relative",
                   }}
-                  onError={() => {
-                    console.error("Failed to display image");
-                    setUploadedImage(null);
-                    alert(
-                      "Failed to load image. It may be blocked by CORS policy or the URL is invalid. Please try uploading a file instead.",
-                    );
-                  }}
-                />
+                >
+                  <img
+                    ref={displayedImageRef}
+                    src={uploadedImage}
+                    alt="Source image"
+                    className="uploaded-image"
+                    draggable={false}
+                    style={{
+                      transform: `rotate(${rotation}deg)`,
+                      transition: "transform 0.2s",
+                      display: "block",
+                      maxWidth: 300,
+                      maxHeight: 300,
+                    }}
+                    onLoad={() => {
+                      console.log("Displayed image loaded!");
+                      if (displayedImageRef.current) {
+                        loadedImageRef.current = displayedImageRef.current;
+                        cropImage(
+                          displayedImageRef.current,
+                          cropRect,
+                          rotation,
+                        );
+                      }
+                    }}
+                    onError={() => {
+                      console.error("Failed to display image");
+                      setUploadedImage(null);
+                      alert(
+                        "Failed to load image. It may be blocked by CORS policy or the URL is invalid. Please try uploading a file instead.",
+                      );
+                    }}
+                  />
+                </div>
                 <div
                   className="crop-rectangle"
                   style={{
@@ -482,6 +516,25 @@ function Home() {
                     onMouseDown={(e) => handleResizeMouseDown(e, "se")}
                   />
                 </div>
+              </div>
+              {/* Rotation slider */}
+              <div className="slider-container" style={{ marginTop: 16 }}>
+                <label
+                  htmlFor="rotation-slider"
+                  style={{ display: "block", marginBottom: 4 }}
+                >
+                  Rotation: {rotation}&deg;
+                </label>
+                <input
+                  id="rotation-slider"
+                  type="range"
+                  min="-30"
+                  max="30"
+                  value={rotation}
+                  onChange={(e) => setRotation(Number(e.target.value))}
+                  className="rotation-slider"
+                  style={{ width: "100%" }}
+                />
               </div>
             </div>
 
@@ -518,66 +571,67 @@ function Home() {
                 />
               </div>
             </div>
+          </div>
 
-            {/* Step 3: RESULTS */}
-            <div className="image-column result-column">
-              <h3>3. RESULT</h3>
-              <p className="step-description">Final processed images</p>
+          {/* Step 3: RESULTS */}
+          <div className="image-column result-column">
+            <h3>3. RESULT</h3>
+            <p className="step-description">Final processed images</p>
 
-              <div
-                style={{
-                  display: "flex",
-                  flexDirection: "row",
-                  gap: "1rem",
-                  flexWrap: "wrap",
-                  justifyContent: "center",
-                }}
-              >
-                <div>
-                  <h4
-                    style={{
-                      fontSize: "1rem",
-                      marginBottom: "0.5rem",
-                      opacity: 0.9,
-                      textAlign: "center",
-                    }}
-                  >
-                    Left Mirror
-                  </h4>
-                  <div className="image-container">
-                    {leftMirrorResult ? (
-                      <img
-                        src={leftMirrorResult}
-                        alt="Left mirror result"
-                        className="result-image"
-                      />
-                    ) : (
-                      <div className="processing-message">Processing...</div>
-                    )}
-                  </div>
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "row",
+                gap: "1rem",
+                flexWrap: "wrap",
+                justifyContent: "center",
+              }}
+            >
+              <div>
+                <h4
+                  style={{
+                    fontSize: "1rem",
+                    marginBottom: "0.5rem",
+                    opacity: 0.9,
+                    textAlign: "center",
+                  }}
+                >
+                  Left Mirror
+                </h4>
+                <div className="image-container">
+                  {leftMirrorResult ? (
+                    <img
+                      src={leftMirrorResult}
+                      alt="Left mirror result"
+                      className="result-image"
+                    />
+                  ) : (
+                    <div className="processing-message">Processing...</div>
+                  )}
                 </div>
-                <div>
-                  <h4
-                    style={{
-                      fontSize: "1rem",
-                      marginBottom: "0.5rem",
-                      opacity: 0.9,
-                      textAlign: "center",
-                    }}
-                  >
-                    Right Mirror
-                  </h4>
-                  <div className="image-container">
-                    {rightMirrorResult ? (
-                      <img
-                        src={rightMirrorResult}
-                        alt="Right mirror result"
-                        className="result-image"
-                      />
-                    ) : (
-                      <div className="processing-message">Processing...</div>
-                    )}
-                  </div>
+              </div>
+              <hr />
+              <div>
+                <h4
+                  style={{
+                    fontSize: "1rem",
+                    marginBottom: "0.5rem",
+                    opacity: 0.9,
+                    textAlign: "center",
+                  }}
+                >
+                  Right Mirror
+                </h4>
+                <div className="image-container">
+                  {rightMirrorResult ? (
+                    <img
+                      src={rightMirrorResult}
+                      alt="Right mirror result"
+                      className="result-image"
+                    />
+                  ) : (
+                    <div className="processing-message">Processing...</div>
+                  )}
                 </div>
               </div>
             </div>
