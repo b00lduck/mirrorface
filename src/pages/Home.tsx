@@ -60,6 +60,36 @@ function Home() {
     }
   }, [uploadedImage]);
 
+  // Handle paste events for clipboard images
+  useEffect(() => {
+    const handlePaste = (e: ClipboardEvent) => {
+      const items = e.clipboardData?.items;
+      if (!items) return;
+
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].type.indexOf("image") !== -1) {
+          const blob = items[i].getAsFile();
+          if (blob) {
+            const reader = new FileReader();
+            reader.onload = () => {
+              const dataUrl = reader.result as string;
+              console.log("Pasted image from clipboard");
+              setUploadedImage(dataUrl);
+            };
+            reader.readAsDataURL(blob);
+          }
+          e.preventDefault();
+          break;
+        }
+      }
+    };
+
+    document.addEventListener("paste", handlePaste);
+    return () => {
+      document.removeEventListener("paste", handlePaste);
+    };
+  }, []);
+
   const fetchImageAsDataUrl = async (url: string) => {
     try {
       console.log("Fetching image as blob...");
@@ -361,11 +391,12 @@ function Home() {
     <div className="home">
       <h1 className="home-title">Upload Your Face Photo</h1>
       <p className="home-description">
-        Select a photo from your device or enter an image URL.
+        Select a photo from your device, paste from clipboard, or enter an image
+        URL.
         <br />
         <small style={{ fontSize: "0.85em", opacity: 0.8 }}>
-          Note: External URLs may not work due to CORS restrictions. File upload
-          is recommended.
+          Tip: Copy an image and press Ctrl+V (or Cmd+V) to paste it here.
+          External URLs may not work due to CORS restrictions.
         </small>
       </p>
 
