@@ -484,7 +484,7 @@ function Home() {
             </div>
 
             {/* Step 3: RESULT */}
-            <div className="image-column">
+            <div className="image-column result-column">
               <h3>3. RESULT</h3>
               <p className="step-description">Final processed image</p>
               <div className="image-container">
@@ -492,7 +492,7 @@ function Home() {
                   <img
                     src={finalResult}
                     alt="Final result"
-                    className="uploaded-image"
+                    className="result-image"
                   />
                 ) : (
                   <div className="processing-message">Processing...</div>

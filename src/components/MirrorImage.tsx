@@ -39,12 +39,12 @@ export function useMirrorImage({
         return;
       }
 
-      // Canvas size same as source image
-      canvas.width = img.width;
-      canvas.height = img.height;
-
       // Calculate the mirror line position in pixels
       const mirrorX = (img.width * mirrorLinePosition) / 100;
+
+      // Canvas size: width = 2 * mirrorX, height = cropped image height
+      canvas.width = 2 * mirrorX;
+      canvas.height = img.height;
 
       console.log("Mirror at X:", mirrorX, "of", img.width);
 
