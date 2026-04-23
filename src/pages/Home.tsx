@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import ImageUpload from "../components/ImageUpload";
+import { useMirrorImage } from "../components/MirrorImage";
 import "./Home.css";
 
 interface CropRect {
@@ -11,9 +12,7 @@ interface CropRect {
 
 function Home() {
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
-  const [imageLoadSuccess, setImageLoadSuccess] = useState<boolean>(false);
   const [croppedImage, setCroppedImage] = useState<string | null>(null);
-  const [finalResult, setFinalResult] = useState<string | null>(null);
   const [linePosition, setLinePosition] = useState<number>(50);
   const [imageUrl, setImageUrl] = useState<string>("");
   const [cropRect, setCropRect] = useState<CropRect>({
@@ -30,11 +29,16 @@ function Home() {
   const loadedImageRef = useRef<HTMLImageElement | null>(null);
   const displayedImageRef = useRef<HTMLImageElement | null>(null);
 
+  // Use the mirror image hook for step 3
+  const finalResult = useMirrorImage({
+    sourceImage: croppedImage,
+    mirrorPosition: linePosition,
+  });
+
   // Load the image once when uploadedImage changes
   useEffect(() => {
     if (uploadedImage) {
       console.log("Loading image:", uploadedImage.substring(0, 50));
-      setImageLoadSuccess(false);
 
       // If it's already a data URL, use it directly
       if (uploadedImage.startsWith("data:")) {
@@ -46,7 +50,6 @@ function Home() {
     } else {
       loadedImageRef.current = null;
       setCroppedImage(null);
-      setImageLoadSuccess(false);
     }
   }, [uploadedImage]);
 
@@ -130,16 +133,6 @@ function Home() {
       console.log("No loaded image in ref");
     }
   }, [cropRect]);
-
-  // Step 2: Process with line (for now just copy the cropped image)
-  useEffect(() => {
-    if (croppedImage) {
-      console.log("Cropped image updated, length:", croppedImage.length);
-      // For now, final result is same as cropped image
-      // This is where future processing based on linePosition will happen
-      setFinalResult(croppedImage);
-    }
-  }, [croppedImage, linePosition]);
 
   const cropImage = (img: HTMLImageElement, rect: CropRect) => {
     const canvas = document.createElement("canvas");
@@ -283,7 +276,6 @@ function Home() {
           );
           break;
         case "sw": // Bottom-left
-          const newWidth = Math.max(10, cropRect.width - deltaX);
           const newX = Math.max(
             0,
             Math.min(cropRect.x + deltaX, cropRect.x + cropRect.width - 10),
@@ -296,7 +288,6 @@ function Home() {
           );
           break;
         case "ne": // Top-right
-          const newHeight = Math.max(10, cropRect.height - deltaY);
           const newY = Math.max(
             0,
             Math.min(cropRect.y + deltaY, cropRect.y + cropRect.height - 10),
@@ -309,12 +300,10 @@ function Home() {
           );
           break;
         case "nw": // Top-left
-          const newHeightNW = Math.max(10, cropRect.height - deltaY);
           const newYNW = Math.max(
             0,
             Math.min(cropRect.y + deltaY, cropRect.y + cropRect.height - 10),
           );
-          const newWidthNW = Math.max(10, cropRect.width - deltaX);
           const newXNW = Math.max(
             0,
             Math.min(cropRect.x + deltaX, cropRect.x + cropRect.width - 10),
@@ -417,7 +406,6 @@ function Home() {
                   draggable={false}
                   onLoad={() => {
                     console.log("Displayed image loaded!");
-                    setImageLoadSuccess(true);
                     if (displayedImageRef.current) {
                       loadedImageRef.current = displayedImageRef.current;
                       cropImage(displayedImageRef.current, cropRect);
@@ -425,7 +413,6 @@ function Home() {
                   }}
                   onError={() => {
                     console.error("Failed to display image");
-                    setImageLoadSuccess(false);
                     setUploadedImage(null);
                     alert(
                       "Failed to load image. It may be blocked by CORS policy or the URL is invalid. Please try uploading a file instead.",
