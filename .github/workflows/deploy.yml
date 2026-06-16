@@ -41,10 +41,17 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Install zizmor
+        run: pip install zizmor
+
       - name: Run zizmor
-        uses: woodruffw/zizmor-action@v1
+        run: zizmor --format sarif . > zizmor.sarif
+        continue-on-error: true
+
+      - name: Upload SARIF
+        uses: github/codeql-action/upload-sarif@v3
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          sarif_file: zizmor.sarif
 
   build:
     runs-on: ubuntu-latest
