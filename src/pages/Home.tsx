@@ -148,6 +148,12 @@ function Home() {
     }
   };
 
+  const handleImageLoaded = (img: HTMLImageElement) => {
+    resetAllControls();
+    loadedImageRef.current = img;
+    cropImage(img, { x: 25, y: 25, width: 50, height: 50 });
+  };
+
   const tryDirectLoad = (url: string) => {
     console.log("Trying direct image load...");
     const img = new Image();
@@ -155,9 +161,7 @@ function Home() {
 
     img.onload = () => {
       console.log("Direct load successful:", img.width, "x", img.height);
-      resetAllControls();
-      loadedImageRef.current = img;
-      cropImage(img, { x: 25, y: 25, width: 50, height: 50 });
+      handleImageLoaded(img);
     };
 
     img.onerror = () => {
@@ -177,9 +181,7 @@ function Home() {
 
     img.onload = () => {
       console.log("Image loaded successfully:", img.width, "x", img.height);
-      resetAllControls();
-      loadedImageRef.current = img;
-      cropImage(img, { x: 25, y: 25, width: 50, height: 50 });
+      handleImageLoaded(img);
     };
 
     img.onerror = (error) => {
@@ -283,12 +285,18 @@ function Home() {
     }
   };
 
+  const getMousePos = (e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = imageContainerRef.current!.getBoundingClientRect();
+    return {
+      x: ((e.clientX - rect.left) / rect.width) * 100,
+      y: ((e.clientY - rect.top) / rect.height) * 100,
+    };
+  };
+
   const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!imageContainerRef.current) return;
 
-    const rect = imageContainerRef.current.getBoundingClientRect();
-    const x = ((e.clientX - rect.left) / rect.width) * 100;
-    const y = ((e.clientY - rect.top) / rect.height) * 100;
+    const { x, y } = getMousePos(e);
 
     // Check if click is inside the crop rectangle
     if (
@@ -309,9 +317,7 @@ function Home() {
     e.stopPropagation();
     if (!imageContainerRef.current) return;
 
-    const rect = imageContainerRef.current.getBoundingClientRect();
-    const x = ((e.clientX - rect.left) / rect.width) * 100;
-    const y = ((e.clientY - rect.top) / rect.height) * 100;
+    const { x, y } = getMousePos(e);
 
     setIsResizing(true);
     setResizeHandle(handle);
@@ -321,9 +327,7 @@ function Home() {
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!imageContainerRef.current) return;
 
-    const rect = imageContainerRef.current.getBoundingClientRect();
-    const x = ((e.clientX - rect.left) / rect.width) * 100;
-    const y = ((e.clientY - rect.top) / rect.height) * 100;
+    const { x, y } = getMousePos(e);
 
     if (isDragging) {
       // Move the rectangle
