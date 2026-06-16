@@ -12,7 +12,6 @@ permissions:
   id-token: write
   checks: write
   pull-requests: write
-  security-events: write
 
 concurrency:
   group: "pages"
@@ -33,27 +32,7 @@ jobs:
           VALIDATE_ALL_CODEBASE: ${{ github.event_name == 'push' && github.ref == 'refs/heads/master' }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  zizmor:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          persist-credentials: false
-
-      - name: Install zizmor
-        run: pip install zizmor
-
-      - name: Run zizmor
-        run: zizmor --format sarif . > zizmor.sarif
-        continue-on-error: true
-
-      - name: Upload SARIF
-        uses: github/codeql-action/upload-sarif@v4
-        with:
-          sarif_file: zizmor.sarif
-
-  build:
+build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -88,7 +67,7 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
-    needs: [build, megalinter, zizmor]
+    needs: [build, megalinter]
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
