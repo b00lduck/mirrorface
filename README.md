@@ -63,7 +63,7 @@ The built files will be in the `dist/` directory.
 
 ## Project Structure
 
-```
+```text
 src/
 ├── components/
 │   ├── ImageUpload.tsx      # File upload button
