@@ -3,11 +3,11 @@
 }
 
 .page-content {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgb(255 255 255 / 10%);
   backdrop-filter: blur(10px);
   padding: 48px;
   border-radius: 12px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 8px 32px rgb(0 0 0 / 20%);
   width: 800px;
   margin: 0 auto;
 }
@@ -15,7 +15,7 @@
 .page-content h1 {
   font-size: 2.5rem;
   margin-bottom: 1.5rem;
-  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+  text-shadow: 2px 2px 4px rgb(0 0 0 / 30%);
 }
 
 .page-content h2 {
